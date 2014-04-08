@@ -8273,7 +8273,7 @@ module.exports = {
 
 
 }).call(this,require("C:\\projects\\little-game\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/config.coffee","/")
-},{"./selectors.coffee":14,"C:\\projects\\little-game\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js":4,"buffer":1}],8:[function(require,module,exports){
+},{"./selectors.coffee":15,"C:\\projects\\little-game\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js":4,"buffer":1}],8:[function(require,module,exports){
 (function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
 var Card, Dealer, config, gameEvents;
 
@@ -8394,7 +8394,7 @@ config = require('./config.coffee');
 Grid = (function() {
   function Grid() {
     this.getTile = __bind(this.getTile, this);
-    var column, grid, row, self, x, y, _i, _j, _ref, _ref1;
+    var column, grid, row, self, x, y, _i, _j, _k, _ref, _ref1;
     grid = this._grid = [];
     self = this;
     for (row = _i = 0, _ref = config.rows - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; row = 0 <= _ref ? ++_i : --_i) {
@@ -8404,13 +8404,29 @@ Grid = (function() {
         grid.push(new Tile(config.tileWidth, config.tileHeight, x, y, row, column, self));
       }
     }
+    for (x = _k = 0; _k < 9; x = ++_k) {
+      this.placeRandomCard();
+    }
   }
 
   Grid.prototype.getTile = function(row, column) {
     return this._grid[column + row * config.columns];
   };
 
-  Grid.prototype.streamTileGroups = function() {
+  Grid.prototype._getAvailableTiles = function() {
+    return _(this._grid).filter(function(t) {
+      return t.vacant === true;
+    }).value();
+  };
+
+  Grid.prototype.placeRandomCard = function() {
+    var availableTiles, randomIndex;
+    availableTiles = this._getAvailableTiles();
+    randomIndex = _.random(availableTiles.length - 1);
+    return availableTiles[randomIndex].place(new Card);
+  };
+
+  Grid.prototype.streamConnected = function() {
     var canvasClick, self;
     canvasClick = trx.fromDomEvent('click', $.canvas);
     self = this;
@@ -8440,7 +8456,7 @@ module.exports = new Grid;
 
 
 }).call(this,require("C:\\projects\\little-game\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/grid.coffee","/")
-},{"./card.coffee":6,"./config.coffee":7,"./dealer.coffee":8,"./gameEvents.coffee":10,"./helper.coffee":12,"./selectors.coffee":14,"./tile.coffee":15,"C:\\projects\\little-game\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js":4,"buffer":1,"lodash":5}],12:[function(require,module,exports){
+},{"./card.coffee":6,"./config.coffee":7,"./dealer.coffee":8,"./gameEvents.coffee":10,"./helper.coffee":12,"./selectors.coffee":15,"./tile.coffee":16,"C:\\projects\\little-game\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js":4,"buffer":1,"lodash":5}],12:[function(require,module,exports){
 (function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
 var $, t;
 
@@ -8453,7 +8469,7 @@ t = {
     return [xmouse - box.left, ymouse - box.top];
   },
   interpolateProperty: function(prop, to, interval) {
-    var factor;
+    var factor, interpolate;
     if (interval == null) {
       interval = 10;
     }
@@ -8461,12 +8477,15 @@ t = {
     if (prop.value() > to) {
       factor = -1;
     }
-    return setTimeout(function() {
-      if (prop.value() !== to) {
-        prop.value(prop.value() + factor);
-        return t.interpolateProperty(prop, to, interval);
-      }
-    }, interval);
+    interpolate = function() {
+      return setTimeout(function() {
+        if (prop.value() !== to) {
+          prop.value(prop.value() + factor);
+          return interpolate();
+        }
+      }, interval);
+    };
+    return interpolate();
   },
   highlightTileGroup: function(tiles) {
     var i, _fn, _i, _len;
@@ -8487,65 +8506,31 @@ module.exports = t;
 
 
 }).call(this,require("C:\\projects\\little-game\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/helper.coffee","/")
-},{"./selectors.coffee":14,"C:\\projects\\little-game\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js":4,"buffer":1}],13:[function(require,module,exports){
+},{"./selectors.coffee":15,"C:\\projects\\little-game\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js":4,"buffer":1}],13:[function(require,module,exports){
 (function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
-var $, availableFigures, config, grid, h, rebasedTileFormation, score, scoreAnimation, sortedTileGroup, tileGroups, validFormations;
+var $, config, connectedTiles, gameEvents, grid, h, score, scoreAnimation, ss;
 
 h = require('./helper.coffee');
 
 config = require('./config.coffee');
 
+gameEvents = require('./gameEvents.coffee');
+
 $ = require('./selectors.coffee');
 
-availableFigures = require('./formations.coffee');
+ss = require('./scoreStrategies.coffee');
 
 grid = require('./grid.coffee');
 
-tileGroups = grid.streamTileGroups();
-
-sortedTileGroup = tileGroups.map(function(group) {
-  var tiles;
-  return tiles = _(group).chain().sortBy('column').sortBy('row').value();
+gameEvents.tickStream.subscribe(function() {
+  return grid.placeRandomCard(2);
 });
 
-rebasedTileFormation = sortedTileGroup.map(function(group) {
-  var minColumn, minRow;
-  minColumn = 0;
-  minRow = 0;
-  return _(group).tap(function(sortedTiles) {
-    minColumn = _(sortedTiles).min('column').value().column;
-    return minRow = _(sortedTiles).min('row').value().row;
-  }).map(function(tile) {
-    return {
-      active: tile.active,
-      column: tile.column - minColumn,
-      row: tile.row - minRow,
-      tile: tile
-    };
-  }).value();
-});
-
-validFormations = rebasedTileFormation.map(function(formations) {
-  var figure, figureHash;
-  figureHash = _(formations).map(function(tile) {
-    return [tile.column, tile.row];
-  }).flatten().value().join('');
-  figure = _(availableFigures).findWhere({
-    figure: figureHash
-  });
-  if (!figure) {
-    return false;
-  } else {
-    _(formations).each(function(t) {
-      return t.tile.reset();
-    });
-    return figure;
-  }
-});
+connectedTiles = grid.streamConnected();
 
 scoreAnimation = trx.createProperty();
 
-score = validFormations.truethy().extract('points').createProperty(function(score, points) {
+score = ss.scoreByAmount(connectedTiles).createProperty(function(score, points) {
   return score + parseInt(points);
 }, 0);
 
@@ -8559,7 +8544,70 @@ scoreAnimation.subscribe(function(points) {
 
 
 }).call(this,require("C:\\projects\\little-game\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/index.coffee","/")
-},{"./config.coffee":7,"./formations.coffee":9,"./grid.coffee":11,"./helper.coffee":12,"./selectors.coffee":14,"C:\\projects\\little-game\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js":4,"buffer":1}],14:[function(require,module,exports){
+},{"./config.coffee":7,"./gameEvents.coffee":10,"./grid.coffee":11,"./helper.coffee":12,"./scoreStrategies.coffee":14,"./selectors.coffee":15,"C:\\projects\\little-game\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js":4,"buffer":1}],14:[function(require,module,exports){
+(function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
+var availableFigures;
+
+availableFigures = require('./formations.coffee');
+
+module.exports = {
+  scoreByFormation: function(tileGroup) {
+    return tileGroup.map(function(group) {
+      var tiles;
+      return tiles = _(group).chain().sortBy('column').sortBy('row').value();
+    }).map(function(group) {
+      var minColumn, minRow;
+      minColumn = 0;
+      minRow = 0;
+      return _(group).tap(function(sortedTiles) {
+        minColumn = _(sortedTiles).min('column').value().column;
+        return minRow = _(sortedTiles).min('row').value().row;
+      }).map(function(tile) {
+        return {
+          active: tile.active,
+          column: tile.column - minColumn,
+          row: tile.row - minRow,
+          tile: tile
+        };
+      }).value();
+    }).map(function(formations) {
+      var figure, figureHash;
+      figureHash = _(formations).map(function(tile) {
+        return [tile.column, tile.row];
+      }).flatten().value().join('');
+      figure = _(availableFigures).findWhere({
+        figure: figureHash
+      });
+      if (!figure) {
+        return false;
+      } else {
+        _(formations).each(function(t) {
+          return t.tile.reset();
+        });
+        return figure;
+      }
+    }).truethy().extract('points');
+  },
+  scoreByAmount: function(tileGroup) {
+    return tileGroup.map(function(group) {
+      var t, _i, _len;
+      console.log(group.length);
+      if (group.length < 5) {
+        return false;
+      } else {
+        for (_i = 0, _len = group.length; _i < _len; _i++) {
+          t = group[_i];
+          t.reset();
+        }
+        return group.length * (group.length / 5);
+      }
+    }).truethy();
+  }
+};
+
+
+}).call(this,require("C:\\projects\\little-game\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/scoreStrategies.coffee","/")
+},{"./formations.coffee":9,"C:\\projects\\little-game\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js":4,"buffer":1}],15:[function(require,module,exports){
 (function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
 var $, $el, _i, _len, _ref;
 
@@ -8575,7 +8623,7 @@ module.exports = $;
 
 
 }).call(this,require("C:\\projects\\little-game\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],"/selectors.coffee","/")
-},{"C:\\projects\\little-game\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js":4,"buffer":1}],15:[function(require,module,exports){
+},{"C:\\projects\\little-game\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js":4,"buffer":1}],16:[function(require,module,exports){
 (function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,__filename,__dirname){
 var Tile, c, _,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
@@ -8597,7 +8645,7 @@ Tile = (function() {
     this.neighbours = __bind(this.neighbours, this);
     this.highlight = __bind(this.highlight, this);
     this.reset = __bind(this.reset, this);
-    this._vacant = true;
+    this.vacant = true;
     this.tile = null;
     this.timer = 0;
     this.drawFrame();
@@ -8620,7 +8668,7 @@ Tile = (function() {
     c.context.fillRect(this.x, this.y, this.w, this.h);
     c.context.fillStyle = 'black';
     this.drawFrame();
-    this._vacant = true;
+    this.vacant = true;
     return this;
   };
 

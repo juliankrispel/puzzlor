@@ -3,7 +3,7 @@ c = require('./config.coffee')
 
 class Tile
     constructor: (@w = 10, @h = 10, @x = 0, @y = 0, @row, @column, @_grid) ->
-        @_vacant = true
+        @vacant = true
         @tile = null
         @timer = 0
         @drawFrame()
@@ -22,7 +22,7 @@ class Tile
         c.context.fillRect(@x,@y,@w,@h)
         c.context.fillStyle = 'black'
         @drawFrame()
-        @_vacant = true
+        @vacant = true
         @
 
     highlight: (delay) =>

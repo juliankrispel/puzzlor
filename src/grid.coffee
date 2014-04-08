@@ -16,10 +16,18 @@ class Grid
             for column in [0..config.columns-1]
                 x = column * config.tileWidth
                 grid.push(new Tile(config.tileWidth, config.tileHeight, x, y, row, column, self))
-
+        for x in [0...9]
+            @placeRandomCard()
     getTile: (row, column) =>
         @_grid[column + row*config.columns]
 
+    _getAvailableTiles: ()->
+        _(@_grid).filter((t)-> t.vacant == true).value()
+
+    placeRandomCard: ()->
+        availableTiles = @_getAvailableTiles()
+        randomIndex = _.random(availableTiles.length-1)
+        availableTiles[randomIndex].place(new Card)
 
     streamConnected: () ->
         canvasClick = trx.fromDomEvent('click', $.canvas)

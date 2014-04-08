@@ -11,11 +11,13 @@ t = {
         factor = +1
         factor = -1 if(prop.value() > to)
 
-        setTimeout(()->
-            if(prop.value()!=to)
-                prop.value(prop.value()+factor)
-                t.interpolateProperty(prop, to, interval)
-        , interval)
+        interpolate = ()->
+            setTimeout(()->
+                if(prop.value()!=to)
+                    prop.value(prop.value()+factor)
+                    interpolate()
+            , interval)
+        interpolate()
 
     highlightTileGroup: (tiles) ->
         for t, i in tiles
