@@ -20,6 +20,7 @@ class Grid
     getTile: (row, column) =>
         @_grid[column + row*config.columns]
 
+
     streamConnected: () ->
         canvasClick = trx.fromDomEvent('click', $.canvas)
         self = @
