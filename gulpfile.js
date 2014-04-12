@@ -1,12 +1,7 @@
 var gulp = require('gulp'),
-    fs = require('fs'),
-    gutil = require('gulp-util'),
-    coffee = require('gulp-coffee'),
     watch = require('gulp-watch'),
     browserify = require('gulp-browserify'),
     connect = require('gulp-connect'),
-    uglify = require('gulp-uglify'),
-    plumber = require('gulp-plumber')
     rename = require('gulp-rename');
 
 
