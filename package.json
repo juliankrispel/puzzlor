@@ -1,10 +1,11 @@
 {
-  "name": "tiny-rx",
+  "name": "puzzlor",
   "version": "0.0.1",
   "description": "",
   "main": "main.js",
   "dependencies": {
-    "lodash": "~2.4.1"
+    "lodash": "~2.4.1",
+    "tiny-rx": "git://github.com/juliankrispel/tiny-rx"
   },
   "devDependencies": {
     "gulp": "~3.6.0",
@@ -14,7 +15,8 @@
     "gulp-rename": "~1.2.0",
     "gulp-util": "~2.2.14",
     "gulp-plumber": "~0.5.6",
-    "gulp-browserify": "~0.5.0"
+    "gulp-browserify": "~0.5.0",
+    "gulp-connect": "~2.0.5"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

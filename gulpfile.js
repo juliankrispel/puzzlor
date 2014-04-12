@@ -4,6 +4,7 @@ var gulp = require('gulp'),
     coffee = require('gulp-coffee'),
     watch = require('gulp-watch'),
     browserify = require('gulp-browserify'),
+    connect = require('gulp-connect'),
     uglify = require('gulp-uglify'),
     plumber = require('gulp-plumber')
     rename = require('gulp-rename');
@@ -20,25 +21,23 @@ gulp.task('browserify', function(){
             console.log('browserify encountered an error: ', e,d);
         })
         .pipe(rename({basename: 'game', extname: '.js'}))
-        .pipe(gulp.dest('./dist/'));
+        .pipe(gulp.dest('./dist/'))
+        .pipe(connect.reload());
 });
 
-gulp.task('buildSrc', function () {
-    gulp.src('./src/*.coffee')
-        .pipe(plumber())
-        .pipe(coffee({bare: true}))
-        .on('error', gutil.log)
-        .on('error', gutil.beep)
-        .pipe(rename({extname: '.js'}))
-        .pipe(gulp.dest('./dist/'))
-        .pipe(uglify())
-        .pipe(rename({suffix: '.min'}))
-        .pipe(gulp.dest('./dist/'));
+gulp.task('connect', function() {
+  connect.server({
+    root: './',
+    port: 6777,
+    livereload: true
+  });
 });
 
 var watcher = gulp.watch('./src/*.coffee', ['browserify']);
-gulp.task('default', function(){
+gulp.task('watch', function(){
     watcher.on('change', function(event){
         console.log('File '+event.path+' was '+event.type+', running tasks...');
     });
 });
+
+gulp.task('default', ['connect', 'watch']);
